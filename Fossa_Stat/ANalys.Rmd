@@ -1,0 +1,221 @@
+---
+title: "Analysis"
+output: html_document
+date: "`r Sys.Date()`"
+---
+Descriptive statistics
+explore data
+
+```{r setup, include=FALSE}
+str(data)
+summary(data)
+mean(data$sbp, na.rm = TRUE)
+median(data$bmi,na.rm = TRUE)
+```
+Mode,quantiles, range, calculation
+```{r setup, include=FALSE}
+library(DescTools)
+Mode(data$bmi_grp4,na.rm=TRUE)
+quantile(data$bmi, probs = 0.25, na.rm = TRUE)
+IQR(data$sbp, na.rm = TRUE)
+range(data$sbp, na.rm = TRUE)
+sd(data$sbp, na.rm = TRUE)
+var(data$sbp, na.rm = TRUE)
+```
+Representation graphique
+```{r setup, include=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+bmi.counts<-table(data$bmi)
+barplot(bmi.counts, xlab = "bmi",ylab = "populaion",main = "Represenation", col=heat.colors(56))
+hist(data$sbp,xlab = "xxx",ylab = "yyy",main = "Representation",col = heat.colors(67))
+```
+
+
+Grouping continuous data
+```{r setup, include=FALSE}
+data$bmi_group<-NA
+data$bmi_group [data$bmi<18.5]<-0
+
+data$bmi_group [data$bmi >=18.5 & data$bmi<25]<-1
+
+data$bmi_group [data$bmi >=25 & data$bmi <30]<-2
+
+data$bmi_group [data$bmi >=30]<-3
+data$bmi_group <- factor (data$bmi_group, labels=c("<18.5", "18.5-24.9", "25-29.9", ">30"))
+summary(data$bmi_group)
+```
+
+Standard error (SE) can be defined as the standard deviation of the sampling distribution. Standard Deviation (SD) and sample size (n) can be used to calculate SE as per the following formula:
+
+LaTeX: SE=\frac{SD}{\sqrt{n}}
+
+```{r setup, include=FALSE}
+SBP.n <- sum(!is.na(data$sbp))
+SBP.sd<-sd(data$sbp, na.rm = TRUE)
+SBP.sd<-round(SBP.sd,3)
+SBP.se<-SBP.sd/sqrt(SBP.n)
+SBP.se<-round(SBP.se, 3)
+```
+Z0.975 is the 97.5% percentile of the standard normal distribution (~1.96 SD from the mean). We can determine this precisely in R using qnorm(0.975), as previously demonstrated.
+
+Knowing this formula, and armed with both our previous calculations, and knowledge of how to calculate the mean, we can calculate the 95% Cis for SBP as follows.
+```{r setup, include=FALSE}
+Za <- qnorm (0.975)
+
+SBP.mean <- mean(data$sbp, na.rm=TRUE)
+
+ci.Z_SBP <- c(SBP.mean-(SBP.sd/sqrt(SBP.n)*Za), SBP.mean + (SBP.sd/sqrt(SBP.n)*Za))
+
+ci.Z_SBP
+```
+
+Hypothesis testing
+
+```{r setup, include=FALSE}
+data$bmibinary <- NA
+data$bmibinary[data$bmi <25] = 1
+data$bmibinary[data$bmi >= 25] = 2
+table (data$bmibinary)
+t.test(sbp~bmibinary, data=data)
+```
+
+Form of data                Transformation
+
+Slightly right-skewed       Square root
+
+Moderately right-skewed     Logarithmic
+
+Very right-skewed           Reciprocal
+
+Left-skewed                 Square
+
+Counts                      Square root
+
+Proportions                 Arcsine square root
+
+```{r setup, include=FALSE}
+hist(data$hdlc,xlab = "hdlc" , ylab = "population",main = "hdlc of the whitehall people", col = heat.colors(43))
+data$variable_log <- log(data$hdlc)
+```
+
+POWER & SAMPLE SIZE
+
+Power calculations for a difference in means
+
+cohen's = d = mean's diff/SD 
+```{r setup, include=FALSE}
+install.packages("pwr")
+library("pwr")
+power1<-pwr.t.test(d=d, power=0.9, sig.level =0.05 )
+power2<-pwr.t.test(n=190, d=d, sig.level =0.05 )
+```
+
+
+Power Calculations for a difference in proportions
+### alpha = sig.level option and is equal to 0.05
+### power = 0.80
+### p1 = 0.10
+### p2 = 0.15
+```{r setup, include=FALSE}
+power4<-pwr.2p.test(h=ES.h(p1=0.1, p2=0.15), sig.level=0.05, power=0.9)
+plot(power4)
+```
+
+Sample size calculation for testing a hypothesis (Clinical trials or clinical interventional studies)
+
+```{r setup, include=FALSE}
+power6<-pwr.2p.test(h=ES.h(p1=0.25, p2=0.65), power=0.8, sig.level=0.05)
+```
+
+
+Sample size calculations for cross-sectional studies (or surveys)
+
+```{r setup, include=FALSE}
+power8<-pwr.p.test(h=ES.h(p1=0.3, p2=0.4), power=0.8, sig.level=0.05)
+```
+
+Sample size calculations for case-control studies
+p2 = (OR*p1 )/(1 +p1 (OR-1))
+```{r setup, include=FALSE}
+#Calcul par simple formula
+```
+
+
+Correlation and Scatterplots
+
+```{r setup, include=FALSE}
+plot(data$bmi,data$sbp, xlab = "BMI (kg/m2)", ylab="Systolic blood pressure (mm Hg)", cex=0.8)
+cor(data$bmi,data$sbp,use="complete.obs")
+```
+
+Differences Between Means (ANOVA 1)
+We use aov() to perform ANOVA, and we get a summary of the ANOVA table using summary().
+aov() can be used in two ways as follows:
+fit3 <- aov(y ~ x, data=my.data)
+fit3 <- aov(my.data$y ~ my.data$x)
+
+```{r setup, include=FALSE}
+data$bmi_fact<-factor(data$bmi_grp4)
+fit3<-aov(sbp~bmi_fact, data=data)
+summary(fit3)
+```
+
+Univariable Linear Regression
+
+```{r setup, include=FALSE}
+data$bmi_fact<-factor(data$bmi_grp4)
+fit3<-aov(sbp~bmi_fact, data=data)
+summary(fit3)
+```
+
+Univariable Linear Regression
+
+
+First, we need to tell R to treat our exposure as a categorical variable:
+We can use is.factor() to check that the new created variable is indeed a factor variable.
+Then, we use table() to count the number of participants in each BMI category.
+We can use aggregate() to compute summary statistics for SBP by BMI.
+```{r setup, include=FALSE}
+data$bmi_fact<-factor(data$bmi_grp4)
+is.factor(data$bmi_fact)
+table(data$bmi_fact)
+aggregate(data$sbp, list(data$bmi_fact), FUN=mean, na.rm=TRUE)
+data<-within(data,bmi_fact<-relevel(bmi_fact,ref=2))
+fit2 <- lm(sbp ~ bmi_fact, data=data)
+summary(fit2)
+confint(fit2, level=0.95)
+
+```
+
+
+Multivariable Linear Regression
+my.fit <- lm(Y ~ X+ X2 + X3, data = my.data)
+
+```{r setup, include=FALSE}
+fit4 <- lm(sbp ~ bmi_fact+ldlc, data=data)
+summary(fit4)
+fit5 <- lm(sbp ~ bmi_fact+ldlc+currsmoker, data=data)
+summary(fit5)
+```
+
+Model Selection and F-Tests
+
+```{r setup, include=FALSE}
+install.packages("car")
+library(car)
+linearHypothesis(fit5, c("bmi_fact1=0", "bmi_fact3=0", "bmi_fact4=0"))
+
+```
+
+Regression Diagnostics
+
+```{r setup, include=FALSE}
+hist(resid(fit5), main="Histogram of the residuals", xlab="Residuals")
+sum(resid(fit5))
+plot(resid(fit5) ~ fitted(fit5), main="The residuals versus the fitted values", xlab="Fitted values", ylab="Residuals", cex=0.8)
+abline(0,0, col=2)
+```
+
+
+
